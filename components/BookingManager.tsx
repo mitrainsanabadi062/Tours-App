@@ -10,6 +10,7 @@ interface BookingManagerProps {
 const BookingManager: React.FC<BookingManagerProps> = ({ user }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [packages, setPackages] = useState<TourPackage[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<Partial<Booking>>({
     customerName: '',
@@ -66,6 +67,14 @@ const BookingManager: React.FC<BookingManagerProps> = ({ user }) => {
     dataService.exportToCsv(bookings, 'data_pemesanan');
   };
 
+  const filteredBookings = bookings.filter(booking => {
+    const pkg = packages.find(p => p.id === booking.packageId);
+    const search = searchTerm.toLowerCase();
+    const customerMatch = booking.customerName.toLowerCase().includes(search);
+    const packageMatch = pkg ? pkg.name.toLowerCase().includes(search) : false;
+    return customerMatch || packageMatch;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -73,20 +82,36 @@ const BookingManager: React.FC<BookingManagerProps> = ({ user }) => {
           <h2 className="text-2xl font-bold text-gray-900">Manajemen Pemesanan</h2>
           <p className="text-gray-500 text-sm">Input data konsumen dan kelola status trip.</p>
         </div>
-        <div className="flex gap-2">
-          {user.role === 'admin' && (
-            <button onClick={exportData} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              Ekspor CSV
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Cari konsumen atau paket..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            {user.role === 'admin' && (
+              <button onClick={exportData} className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 flex items-center text-sm font-medium">
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Ekspor
+              </button>
+            )}
+            <button
+              onClick={() => { setCurrentBooking({ customerName: '', whatsapp: '', email: '', adultCount: 1, childCount: 0, status: BookingStatus.BOOKING, paymentStatus: PaymentStatus.UNPAID, paymentMethod: 'Cash', paidAmount: 0 }); setIsModalOpen(true); }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center text-sm font-medium"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+              Booking Baru
             </button>
-          )}
-          <button
-            onClick={() => { setCurrentBooking({ customerName: '', whatsapp: '', email: '', adultCount: 1, childCount: 0, status: BookingStatus.BOOKING, paymentStatus: PaymentStatus.UNPAID, paymentMethod: 'Cash', paidAmount: 0 }); setIsModalOpen(true); }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            Booking Baru
-          </button>
+          </div>
         </div>
       </div>
 
@@ -104,7 +129,7 @@ const BookingManager: React.FC<BookingManagerProps> = ({ user }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <tr key={booking.id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-bold text-gray-900">{booking.customerName}</div>
@@ -134,9 +159,11 @@ const BookingManager: React.FC<BookingManagerProps> = ({ user }) => {
                   </td>
                 </tr>
               ))}
-              {bookings.length === 0 && (
+              {filteredBookings.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">Belum ada data pemesanan.</td>
+                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                    {searchTerm ? `Tidak ditemukan pemesanan untuk "${searchTerm}"` : 'Belum ada data pemesanan.'}
+                  </td>
                 </tr>
               )}
             </tbody>

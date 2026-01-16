@@ -1,5 +1,5 @@
 {
-  "name": "TourEase Pro - Tour Agency Management System",
+  "name": "Tour Agency Management System",
   "description": "A comprehensive tour and travel management system featuring multi-role authentication (Admin/Kasir), package management, booking tracking, financial reporting, and vendor management with a mobile-first responsive design.",
   "requestFramePermissions": []
 }

@@ -3,7 +3,7 @@ import React from 'react';
 import { AppSettings, TourPackage, Category, SubCategory } from './types';
 
 export const INITIAL_SETTINGS: AppSettings = {
-  companyName: "TourEase Travel Agency",
+  companyName: "MITRA TOURS",
   description: "Your partner for unforgettable journeys around the globe.",
   address: "Jl. Raya Wisata No. 123, Jakarta Selatan",
   contact: "+62 812-3456-7890",
