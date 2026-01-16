@@ -10,59 +10,69 @@ const KEYS = {
   SETTINGS: 'te_settings'
 };
 
+const safeGet = <T>(key: string, defaultValue: T): T => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (error) {
+    console.error(`Error loading data for key "${key}":`, error);
+    return defaultValue;
+  }
+};
+
+const safeSet = (key: string, value: any): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving data for key "${key}":`, error);
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      alert('Penyimpanan lokal penuh. Harap hapus beberapa data lama.');
+    }
+  }
+};
+
 export const dataService = {
-  getPackages: (): TourPackage[] => {
-    const data = localStorage.getItem(KEYS.PACKAGES);
-    return data ? JSON.parse(data) : MOCK_PACKAGES;
-  },
-  savePackages: (pkgs: TourPackage[]) => {
-    localStorage.setItem(KEYS.PACKAGES, JSON.stringify(pkgs));
-  },
+  getPackages: (): TourPackage[] => safeGet(KEYS.PACKAGES, MOCK_PACKAGES),
+  savePackages: (pkgs: TourPackage[]) => safeSet(KEYS.PACKAGES, pkgs),
   
-  getBookings: (): Booking[] => {
-    const data = localStorage.getItem(KEYS.BOOKINGS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveBookings: (bookings: Booking[]) => {
-    localStorage.setItem(KEYS.BOOKINGS, JSON.stringify(bookings));
-  },
+  getBookings: (): Booking[] => safeGet(KEYS.BOOKINGS, []),
+  saveBookings: (bookings: Booking[]) => safeSet(KEYS.BOOKINGS, bookings),
 
-  getVendors: (): Vendor[] => {
-    const data = localStorage.getItem(KEYS.VENDORS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveVendors: (vendors: Vendor[]) => {
-    localStorage.setItem(KEYS.VENDORS, JSON.stringify(vendors));
-  },
+  getVendors: (): Vendor[] => safeGet(KEYS.VENDORS, []),
+  saveVendors: (vendors: Vendor[]) => safeSet(KEYS.VENDORS, vendors),
 
-  getCosts: (): OperationalCost[] => {
-    const data = localStorage.getItem(KEYS.COSTS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveCosts: (costs: OperationalCost[]) => {
-    localStorage.setItem(KEYS.COSTS, JSON.stringify(costs));
-  },
+  getCosts: (): OperationalCost[] => safeGet(KEYS.COSTS, []),
+  saveCosts: (costs: OperationalCost[]) => safeSet(KEYS.COSTS, costs),
 
-  getSettings: (): AppSettings => {
-    const data = localStorage.getItem(KEYS.SETTINGS);
-    return data ? JSON.parse(data) : INITIAL_SETTINGS;
-  },
-  saveSettings: (settings: AppSettings) => {
-    localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-  },
+  getSettings: (): AppSettings => safeGet(KEYS.SETTINGS, INITIAL_SETTINGS),
+  saveSettings: (settings: AppSettings) => safeSet(KEYS.SETTINGS, settings),
 
-  // Export as CSV simulation
+  // Advanced Export as CSV
   exportToCsv: (data: any[], filename: string) => {
-    if (!data.length) return;
-    const headers = Object.keys(data[0]).join(',');
-    const rows = data.map(obj => Object.values(obj).join(',')).join('\n');
-    const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!data || !data.length) {
+      alert('Tidak ada data untuk diekspor.');
+      return;
+    }
+    
+    try {
+      const headers = Object.keys(data[0]).join(',');
+      const rows = data.map(obj => 
+        Object.values(obj).map(val => 
+          typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val
+        ).join(',')
+      ).join('\n');
+      
+      const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Gagal mengekspor data.');
+    }
   }
 };
